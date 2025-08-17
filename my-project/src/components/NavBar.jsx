@@ -8,7 +8,7 @@ export default function NavBar({ onNavigate, currentPage, user, onLogout }) {
   return (
     <nav className="w-full bg-gray-900/80 border-b border-emerald-500/20 px-4 py-3 flex items-center justify-between shadow-lg shadow-emerald-500/10 z-20">
       <div className="flex items-center gap-2">
-        <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-400 select-none">LeetTrack</span>
+  <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-400 select-none">CodePrep</span>
       </div>
       <div className="hidden sm:flex gap-6 items-center">
         {user && <>

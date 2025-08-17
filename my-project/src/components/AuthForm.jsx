@@ -85,7 +85,7 @@ export default function AuthForm({ onAuth, user }) {
             </svg>
           </div>
           <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-400 mb-1 drop-shadow">{isLogin ? 'Login' : 'Sign Up'}</h2>
-          <p className="text-emerald-200/80 text-sm font-medium mb-2">to continue to LeetTrack</p>
+          <p className="text-emerald-200/80 text-sm font-medium mb-2">to continue to CodePrep</p>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="relative">
