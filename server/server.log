@@ -1,0 +1,8 @@
+nohup: ignoring input
+
+> myproject-server@1.0.0 start
+> node index.js
+
+[dotenv@17.2.1] injecting env (1) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+Server listening on port 3001
+MongoDB connected!
