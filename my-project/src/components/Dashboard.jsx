@@ -1,3 +1,4 @@
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 import React, { useState, useEffect } from 'react';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
@@ -44,7 +45,7 @@ const Dashboard = ({ user }) => {
     if (!user) return;
     const fetchUserStats = async () => {
       try {
-        const res = await fetch('/api/user', {
+        const res = await fetch(`${API_BASE}/api/user`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: user.email })

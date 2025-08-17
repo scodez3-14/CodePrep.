@@ -1,3 +1,4 @@
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
@@ -14,7 +15,7 @@ const CompanyProblems = ({ user }) => {
   const fetchSolved = async () => {
     if (!user) return;
     try {
-      const res = await fetch('/api/user', {
+      const res = await fetch(`${API_BASE}/api/user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email })
@@ -46,7 +47,7 @@ const CompanyProblems = ({ user }) => {
     const problemKey = getProblemKey(selectedCompany, problemName);
     const action = solved.includes(problemKey) ? 'remove' : 'add';
     try {
-      await fetch('/api/solved', {
+      await fetch(`${API_BASE}/api/solved`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

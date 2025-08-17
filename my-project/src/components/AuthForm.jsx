@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
 
 export default function AuthForm({ onAuth, user }) {
   const [email, setEmail] = useState('');
@@ -15,13 +17,13 @@ export default function AuthForm({ onAuth, user }) {
     try {
       let res, data;
       if (isLogin) {
-        res = await fetch('/api/login', {
+        res = await fetch(`${API_BASE}/api/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
       } else {
-        res = await fetch('/api/register', {
+        res = await fetch(`${API_BASE}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -31,7 +33,7 @@ export default function AuthForm({ onAuth, user }) {
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
       // Fetch full user profile from backend to include solved lists
       try {
-        const profileRes = await fetch('/api/user', {
+        const profileRes = await fetch(`${API_BASE}/api/user`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: (data.user && data.user.email) || email })
