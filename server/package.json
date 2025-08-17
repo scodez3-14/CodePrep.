@@ -1,7 +1,7 @@
 {
   "name": "myproject-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server/index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
