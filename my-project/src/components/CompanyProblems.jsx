@@ -172,7 +172,7 @@ const CompanyProblems = ({ user }) => {
 
   if (selectedCompany) {
     // Filter data by question name if search is active
-    const filteredData = questionSearch
+    let filteredData = questionSearch
       ? data.filter(row => {
           let problemName = "";
           Object.entries(row).forEach(([key, value]) => {
@@ -189,6 +189,27 @@ const CompanyProblems = ({ user }) => {
           return problemName.toLowerCase().includes(questionSearch.toLowerCase());
         })
       : data;
+    // Sort so solved questions appear first
+    filteredData = [...filteredData].sort((a, b) => {
+      // Get problem names for a and b
+      let nameA = "", nameB = "";
+      Object.entries(a).forEach(([key, value]) => {
+        if ((key.toLowerCase().includes("name") || key.toLowerCase().includes("title") || key.toLowerCase().includes("problem")) && value && value.trim() !== "") {
+          nameA = value;
+        }
+      });
+      Object.entries(b).forEach(([key, value]) => {
+        if ((key.toLowerCase().includes("name") || key.toLowerCase().includes("title") || key.toLowerCase().includes("problem")) && value && value.trim() !== "") {
+          nameB = value;
+        }
+      });
+      const keyA = getProblemKey(selectedCompany, nameA);
+      const keyB = getProblemKey(selectedCompany, nameB);
+      const aSolved = solved.includes(keyA);
+      const bSolved = solved.includes(keyB);
+      if (aSolved === bSolved) return 0;
+      return aSolved ? -1 : 1;
+    });
     return (
       <div className="max-w-7xl mx-auto p-3 sm:p-4">
         <div className="bg-gray-800/40 border border-emerald-500/20 rounded-lg p-3 sm:p-4 mb-4 backdrop-blur-md shadow-lg shadow-emerald-500/10">
