@@ -31,47 +31,52 @@ mongoose.connect(process.env.MONGODB_URI)
 
 /* ----------------------- ROUTES ----------------------- */
 
-// Register
+// Register with OTP
 app.post('/api/register', async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = new User({ email, password, solved: [], solvedDates: [], recent: [] });
-    await user.save();
-    res.status(201).json({ message: 'User registered!', user: { email: user.email } });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Login with OTP
-app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ email, password });
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    // Check if user already exists
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ error: 'User already exists' });
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
-    user.otp = otp;
-    user.otpExpires = otpExpires;
+
+    const user = new User({ email, password, solved: [], solvedDates: [], recent: [], otp, otpExpires });
     await user.save();
 
     // Send OTP email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: user.email,
-      subject: 'Your CodePrep Login OTP',
-      text: `Your OTP for CodePrep login is: ${otp}. It is valid for 10 minutes.`
+      subject: 'Your CodePrep Signup OTP',
+      text: `Your OTP for CodePrep signup is: ${otp}. It is valid for 10 minutes.`
     });
 
-    res.json({ message: 'OTP sent to email', user: { email: user.email }, otpRequired: true });
+    res.status(201).json({ message: 'OTP sent to email', user: { email: user.email }, otpRequired: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// OTP verification endpoint
+// Login (no OTP)
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email, password });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    // Check if user has unverified OTP (not completed signup)
+    if (user.otp && user.otpExpires && user.otpExpires > new Date()) {
+      return res.status(403).json({ error: 'Please verify your email with the OTP sent during signup.' });
+    }
+    res.json({ message: 'Login successful', user: { email: user.email } });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// OTP verification endpoint (for signup)
 app.post('/api/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -86,7 +91,7 @@ app.post('/api/verify-otp', async (req, res) => {
     user.otpExpires = undefined;
     await user.save();
 
-    res.json({ message: 'OTP verified, login successful', user: { email: user.email } });
+    res.json({ message: 'OTP verified, signup successful', user: { email: user.email } });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

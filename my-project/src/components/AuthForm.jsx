@@ -34,7 +34,7 @@ export default function AuthForm({ onAuth, user }) {
       }
       data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
-      if (isLogin && data.otpRequired) {
+      if (!isLogin && data.otpRequired) {
         setOtpRequired(true);
         setPendingUser(data.user);
         setLoading(false);
