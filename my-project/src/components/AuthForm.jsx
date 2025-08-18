@@ -9,6 +9,9 @@ export default function AuthForm({ onAuth, user }) {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [pendingUser, setPendingUser] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +34,13 @@ export default function AuthForm({ onAuth, user }) {
       }
       data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
-      // Fetch full user profile from backend to include solved lists
+      if (isLogin && data.otpRequired) {
+        setOtpRequired(true);
+        setPendingUser(data.user);
+        setLoading(false);
+        return;
+      }
+      // Registration or login without OTP (shouldn't happen for login)
       try {
         const profileRes = await fetch(`${API_BASE}/api/user`, {
           method: 'POST',
@@ -42,12 +51,48 @@ export default function AuthForm({ onAuth, user }) {
           const profile = await profileRes.json();
           onAuth && onAuth(profile);
         } else {
-          // fallback to whatever minimal user data we have
           onAuth && onAuth(data.user || { email });
         }
       } catch (err) {
         onAuth && onAuth(data.user || { email });
       }
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: pendingUser.email, otp })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'OTP verification failed');
+      // Fetch full user profile
+      try {
+        const profileRes = await fetch(`${API_BASE}/api/user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: pendingUser.email })
+        });
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          onAuth && onAuth(profile);
+        } else {
+          onAuth && onAuth({ email: pendingUser.email });
+        }
+      } catch (err) {
+        onAuth && onAuth({ email: pendingUser.email });
+      }
+      setOtpRequired(false);
+      setPendingUser(null);
+      setOtp('');
     } catch (err) {
       setError(err.message);
     }
@@ -69,6 +114,50 @@ export default function AuthForm({ onAuth, user }) {
         >
           Log Out
         </button>
+      </div>
+    );
+  }
+
+  if (otpRequired) {
+    return (
+      <div className="max-w-sm mx-auto mt-16 p-0 rounded-2xl shadow-2xl bg-gradient-to-br from-gray-900/90 to-slate-900/90 border-2 border-transparent bg-clip-padding relative overflow-hidden">
+        <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-400/20 rounded-full blur-2xl animate-blob"></div>
+        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-teal-400/20 rounded-full blur-2xl animate-blob animation-delay-2000"></div>
+        <div className="relative z-10 p-8">
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center shadow-lg mb-2">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-400 mb-1 drop-shadow">OTP Verification</h2>
+            <p className="text-emerald-200/80 text-sm font-medium mb-2">Enter the OTP sent to your email</p>
+          </div>
+          <form onSubmit={handleOtpSubmit} className="flex flex-col gap-5">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12A4 4 0 118 12a4 4 0 018 0zM12 14v2m0 4h.01" /></svg>
+              </span>
+              <input
+                type="text"
+                placeholder="Enter OTP"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                className="pl-10 pr-3 py-2 rounded-lg bg-gray-800/70 border border-emerald-500/30 text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 w-full placeholder-emerald-200/60"
+                required
+                maxLength={6}
+              />
+            </div>
+            {error && <div className="text-red-400 text-sm text-center font-medium">{error}</div>}
+            <button
+              type="submit"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 disabled:opacity-60 text-lg tracking-wide"
+              disabled={loading}
+            >
+              {loading ? 'Verifying...' : 'Verify OTP'}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }

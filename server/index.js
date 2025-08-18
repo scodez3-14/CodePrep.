@@ -1,9 +1,20 @@
+
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import http from 'http';
 import User from './models/User.js';
+import nodemailer from 'nodemailer';
+// Configure nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER, // set in .env
+    pass: process.env.EMAIL_PASS  // set in .env
+  }
+});
+
 
 dotenv.config();
 const app = express();
@@ -32,13 +43,50 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Login
+// Login with OTP
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email, password });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-    res.json({ message: 'Login successful', user: { email: user.email } });
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    // Send OTP email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: 'Your CodePrep Login OTP',
+      text: `Your OTP for CodePrep login is: ${otp}. It is valid for 10 minutes.`
+    });
+
+    res.json({ message: 'OTP sent to email', user: { email: user.email }, otpRequired: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// OTP verification endpoint
+app.post('/api/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.otp || !user.otpExpires) return res.status(400).json({ error: 'No OTP requested' });
+    if (user.otp !== otp) return res.status(401).json({ error: 'Invalid OTP' });
+    if (user.otpExpires < new Date()) return res.status(401).json({ error: 'OTP expired' });
+
+    // OTP is valid, clear it
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'OTP verified, login successful', user: { email: user.email } });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

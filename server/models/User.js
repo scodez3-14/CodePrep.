@@ -10,7 +10,9 @@ const userSchema = new mongoose.Schema({
       name: String,
       date: String
     }
-  ]
+  ],
+  otp: String,
+  otpExpires: Date
 });
 
 const User = mongoose.model('User', userSchema);
