@@ -1,5 +1,44 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 import React, { useState, useEffect } from 'react';
+// General search state
+const [generalSearchOpen, setGeneralSearchOpen] = useState(false);
+const [generalSearchInput, setGeneralSearchInput] = useState("");
+const [generalSearchResults, setGeneralSearchResults] = useState([]);
+const [generalSearchLoading, setGeneralSearchLoading] = useState(false);
+
+// General search handler
+const handleGeneralSearch = async () => {
+  if (!generalSearchInput.trim()) return;
+  setGeneralSearchLoading(true);
+  setGeneralSearchResults([]);
+  const results = [];
+  // Limit to first 20 companies for demo/performance (remove slice for all)
+  for (const company of companies.slice(0, 20)) {
+    const csvUrl = getCsvUrl(company);
+    try {
+      const parsed = await new Promise((resolve, reject) => {
+        Papa.parse(csvUrl, {
+          download: true,
+          header: true,
+          complete: (res) => resolve(res),
+          error: (err) => reject(err)
+        });
+      });
+      const filtered = parsed.data.filter(row => {
+        let problemName = "";
+        Object.entries(row).forEach(([key, value]) => {
+          if ((key.toLowerCase().includes("name") || key.toLowerCase().includes("title") || key.toLowerCase().includes("problem")) && value && value.trim() !== "") {
+            problemName = value;
+          }
+        });
+        return problemName.toLowerCase().includes(generalSearchInput.toLowerCase());
+      });
+      filtered.forEach(row => results.push({ ...row, company }));
+    } catch (err) {}
+  }
+  setGeneralSearchResults(results);
+  setGeneralSearchLoading(false);
+};
 import Papa from 'papaparse';
 
 const CompanyProblems = ({ user }) => {
@@ -410,6 +449,88 @@ const CompanyProblems = ({ user }) => {
 
   return (
     <div className="max-w-7xl mx-auto p-3 sm:p-4">
+      {/* General Search Button */}
+      <div className="mb-6 flex justify-end">
+        <button
+          className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded font-bold shadow hover:from-emerald-600 hover:to-teal-700 transition-all duration-300"
+          onClick={() => setGeneralSearchOpen(v => !v)}
+        >
+          {generalSearchOpen ? 'Close General Search' : 'General Search'}
+        </button>
+      </div>
+      {/* General Search UI */}
+      {generalSearchOpen && (
+        <div className="mb-8 p-4 bg-gray-800/60 rounded-lg border border-emerald-500/20 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+            <input
+              type="text"
+              placeholder="Search any question by name across all companies..."
+              value={generalSearchInput}
+              onChange={e => setGeneralSearchInput(e.target.value)}
+              className="px-3 py-2 rounded border border-emerald-500/30 bg-gray-900/60 text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm w-full sm:w-96"
+            />
+            <button
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded font-bold shadow hover:from-emerald-600 hover:to-teal-700 transition-all duration-300"
+              onClick={handleGeneralSearch}
+              disabled={generalSearchLoading}
+            >
+              {generalSearchLoading ? 'Searching...' : 'Search'}
+            </button>
+          </div>
+          {generalSearchLoading && <div className="text-emerald-300">Searching across companies...</div>}
+          {!generalSearchLoading && generalSearchResults.length > 0 && (
+            <div>
+              <div className="mb-2 text-emerald-200 font-semibold">Results ({generalSearchResults.length}):</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-900/50 border-b border-emerald-500/20">
+                      <th className="px-2 py-2 text-left text-emerald-300">Company</th>
+                      <th className="px-2 py-2 text-left text-emerald-300">Problem Name</th>
+                      <th className="px-2 py-2 text-left text-emerald-300">Difficulty</th>
+                      <th className="px-2 py-2 text-left text-emerald-300">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generalSearchResults.map((row, idx) => {
+                      let problemName = '';
+                      let difficulty = 'Unknown';
+                      Object.entries(row).forEach(([key, value]) => {
+                        if ((key.toLowerCase().includes('name') || key.toLowerCase().includes('title') || key.toLowerCase().includes('problem')) && value && value.trim() !== '') {
+                          problemName = value;
+                        }
+                        if (key.toLowerCase().includes('difficulty') && value && value.trim() !== '') {
+                          difficulty = value;
+                        }
+                      });
+                      return (
+                        <tr key={idx} className="border-b border-emerald-500/10">
+                          <td className="px-2 py-2 text-emerald-400 font-bold">{row.company}</td>
+                          <td className="px-2 py-2 text-emerald-100">{problemName}</td>
+                          <td className="px-2 py-2 text-emerald-200">{difficulty}</td>
+                          <td className="px-2 py-2">
+                            <button
+                              onClick={() => handleProblemClick(problemName)}
+                              className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-3 py-1 rounded text-xs transition-all duration-300 inline-flex items-center shadow-md hover:shadow-lg"
+                              type="button"
+                              disabled={!problemName}
+                            >
+                              Solve
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {!generalSearchLoading && generalSearchResults.length === 0 && generalSearchInput && (
+            <div className="text-emerald-200 mt-2">No results found.</div>
+          )}
+        </div>
+      )}
       <div className="mb-10 animate-fade-in-up">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <h2 className="text-3xl font-bold md:text-left text-center drop-shadow-sm text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-400">Choose a Company</h2>
