@@ -167,7 +167,28 @@ const CompanyProblems = ({ user }) => {
     window.open(url, '_blank');
   };
 
+  const [questionSearch, setQuestionSearch] = useState("");
+  const [questionSearchInput, setQuestionSearchInput] = useState("");
+
   if (selectedCompany) {
+    // Filter data by question name if search is active
+    const filteredData = questionSearch
+      ? data.filter(row => {
+          let problemName = "";
+          Object.entries(row).forEach(([key, value]) => {
+            if (
+              (key.toLowerCase().includes("name") ||
+                key.toLowerCase().includes("title") ||
+                key.toLowerCase().includes("problem")) &&
+              value &&
+              value.trim() !== ""
+            ) {
+              problemName = value;
+            }
+          });
+          return problemName.toLowerCase().includes(questionSearch.toLowerCase());
+        })
+      : data;
     return (
       <div className="max-w-7xl mx-auto p-3 sm:p-4">
         <div className="bg-gray-800/40 border border-emerald-500/20 rounded-lg p-3 sm:p-4 mb-4 backdrop-blur-md shadow-lg shadow-emerald-500/10">
@@ -188,16 +209,37 @@ const CompanyProblems = ({ user }) => {
               </div>
             </div>
             {!loading && (
-              <div className="text-right">
+              <div className="text-right flex flex-col gap-2 items-end">
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="Search question by name..."
+                    value={questionSearchInput}
+                    onChange={e => setQuestionSearchInput(e.target.value)}
+                    className="px-2 py-1 rounded border border-emerald-500/30 bg-gray-900/60 text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                  />
+                  <button
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-3 py-1 rounded font-semibold shadow hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 text-sm"
+                    onClick={() => setQuestionSearch(questionSearchInput)}
+                  >
+                    Search
+                  </button>
+                  <button
+                    className="ml-1 text-emerald-400 underline text-xs"
+                    onClick={() => { setQuestionSearch(""); setQuestionSearchInput(""); }}
+                    style={{ display: questionSearch ? "inline" : "none" }}
+                  >
+                    Clear
+                  </button>
+                </div>
                 <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-3 py-1.5 rounded-md shadow-md inline-block transform hover:scale-105 transition-transform duration-300">
-                  <p className="text-xl sm:text-2xl font-bold">{data.length}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{filteredData.length}</p>
                   <p className="text-emerald-100 text-xs">Problems</p>
                 </div>
               </div>
             )}
           </div>
         </div>
-        
         {loading ? (
           <div className="bg-gray-800/40 border border-emerald-500/20 rounded-lg p-6 text-center backdrop-blur-md shadow-lg shadow-emerald-500/10">
             <div className="mx-auto mb-2 w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin"></div>
@@ -217,7 +259,7 @@ const CompanyProblems = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-emerald-500/10">
-                  {data.map((row, i) => {
+                  {filteredData.map((row, i) => {
                     // Carefully extract the key fields with fallbacks
                     let problemName = '';
                     
