@@ -45,9 +45,18 @@ const CompanyProblems = ({ user }) => {
   const toggleSolved = async (problemName) => {
     if (!user || !selectedCompany || !problemName) return;
     const problemKey = getProblemKey(selectedCompany, problemName);
-    const action = solved.includes(problemKey) ? 'remove' : 'add';
+    const isSolved = solved.includes(problemKey);
+    const action = isSolved ? 'remove' : 'add';
+    // Optimistically update UI
+    setSolved(prev => {
+      if (isSolved) {
+        return prev.filter(key => key !== problemKey);
+      } else {
+        return [...prev, problemKey];
+      }
+    });
     try {
-      await fetch(`${API_BASE}/api/solved`, {
+      const res = await fetch(`${API_BASE}/api/solved`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -56,8 +65,17 @@ const CompanyProblems = ({ user }) => {
           action
         })
       });
-      fetchSolved();
-    } catch (err) {}
+      if (!res.ok) throw new Error('Failed to update');
+    } catch (err) {
+      // Revert optimistic update if backend fails
+      setSolved(prev => {
+        if (isSolved) {
+          return [...prev, problemKey];
+        } else {
+          return prev.filter(key => key !== problemKey);
+        }
+      });
+    }
   };
 
   // List of all companies
