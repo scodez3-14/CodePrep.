@@ -170,9 +170,47 @@ const CompanyProblems = ({ user }) => {
   const [questionSearch, setQuestionSearch] = useState("");
   const [questionSearchInput, setQuestionSearchInput] = useState("");
 
+  // General search state and handler
+  const [generalSearchOpen, setGeneralSearchOpen] = useState(false);
+  const [generalSearchInput, setGeneralSearchInput] = useState("");
+  const [generalSearchResults, setGeneralSearchResults] = useState([]);
+  const [generalSearchLoading, setGeneralSearchLoading] = useState(false);
+
+  const handleGeneralSearch = async () => {
+    if (!generalSearchInput.trim()) return;
+    setGeneralSearchLoading(true);
+    setGeneralSearchResults([]);
+    const results = [];
+    for (const company of companies.slice(0, 20)) {
+      const csvUrl = getCsvUrl(company);
+      try {
+        const parsed = await new Promise((resolve, reject) => {
+          Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            complete: (res) => resolve(res),
+            error: (err) => reject(err)
+          });
+        });
+        const filtered = parsed.data.filter(row => {
+          let problemName = "";
+          Object.entries(row).forEach(([key, value]) => {
+            if ((key.toLowerCase().includes("name") || key.toLowerCase().includes("title") || key.toLowerCase().includes("problem")) && value && value.trim() !== "") {
+              problemName = value;
+            }
+          });
+          return problemName.toLowerCase().includes(generalSearchInput.toLowerCase());
+        });
+        filtered.forEach(row => results.push({ ...row, company }));
+      } catch (err) {}
+    }
+    setGeneralSearchResults(results);
+    setGeneralSearchLoading(false);
+  };
+
   if (selectedCompany) {
     // Filter data by question name if search is active
-    let filteredData = questionSearch
+    const filteredData = questionSearch
       ? data.filter(row => {
           let problemName = "";
           Object.entries(row).forEach(([key, value]) => {
@@ -189,27 +227,6 @@ const CompanyProblems = ({ user }) => {
           return problemName.toLowerCase().includes(questionSearch.toLowerCase());
         })
       : data;
-    // Sort so solved questions appear first
-    filteredData = [...filteredData].sort((a, b) => {
-      // Get problem names for a and b
-      let nameA = "", nameB = "";
-      Object.entries(a).forEach(([key, value]) => {
-        if ((key.toLowerCase().includes("name") || key.toLowerCase().includes("title") || key.toLowerCase().includes("problem")) && value && value.trim() !== "") {
-          nameA = value;
-        }
-      });
-      Object.entries(b).forEach(([key, value]) => {
-        if ((key.toLowerCase().includes("name") || key.toLowerCase().includes("title") || key.toLowerCase().includes("problem")) && value && value.trim() !== "") {
-          nameB = value;
-        }
-      });
-      const keyA = getProblemKey(selectedCompany, nameA);
-      const keyB = getProblemKey(selectedCompany, nameB);
-      const aSolved = solved.includes(keyA);
-      const bSolved = solved.includes(keyB);
-      if (aSolved === bSolved) return 0;
-      return aSolved ? -1 : 1;
-    });
     return (
       <div className="max-w-7xl mx-auto p-3 sm:p-4">
         <div className="bg-gray-800/40 border border-emerald-500/20 rounded-lg p-3 sm:p-4 mb-4 backdrop-blur-md shadow-lg shadow-emerald-500/10">
