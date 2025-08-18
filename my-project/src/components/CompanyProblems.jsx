@@ -3,45 +3,6 @@ import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 const CompanyProblems = ({ user }) => {
-  // General search state
-  const [generalSearchOpen, setGeneralSearchOpen] = useState(false);
-  const [generalSearchInput, setGeneralSearchInput] = useState("");
-  const [generalSearchResults, setGeneralSearchResults] = useState([]);
-  const [generalSearchLoading, setGeneralSearchLoading] = useState(false);
-
-  // General search handler
-  const handleGeneralSearch = async () => {
-    if (!generalSearchInput.trim()) return;
-    setGeneralSearchLoading(true);
-    setGeneralSearchResults([]);
-    const results = [];
-    // Limit to first 20 companies for demo/performance (remove slice for all)
-    for (const company of companies.slice(0, 20)) {
-      const csvUrl = getCsvUrl(company);
-      try {
-        const parsed = await new Promise((resolve, reject) => {
-          Papa.parse(csvUrl, {
-            download: true,
-            header: true,
-            complete: (res) => resolve(res),
-            error: (err) => reject(err)
-          });
-        });
-        const filtered = parsed.data.filter(row => {
-          let problemName = "";
-          Object.entries(row).forEach(([key, value]) => {
-            if ((key.toLowerCase().includes("name") || key.toLowerCase().includes("title") || key.toLowerCase().includes("problem")) && value && value.trim() !== "") {
-              problemName = value;
-            }
-          });
-          return problemName.toLowerCase().includes(generalSearchInput.toLowerCase());
-        });
-        filtered.forEach(row => results.push({ ...row, company }));
-      } catch (err) {}
-    }
-    setGeneralSearchResults(results);
-    setGeneralSearchLoading(false);
-  };
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -322,6 +283,8 @@ const CompanyProblems = ({ user }) => {
                   {filteredData.map((row, i) => {
                     // Carefully extract the key fields with fallbacks
                     let problemName = '';
+                    
+                    // Look through all object keys for a title-like field
                     Object.entries(row).forEach(([key, value]) => {
                       if (
                         (key.toLowerCase().includes('name') || 
@@ -333,6 +296,8 @@ const CompanyProblems = ({ user }) => {
                         problemName = value;
                       }
                     });
+                    
+                    // Look for frequency fields
                     let frequency = '';
                     Object.entries(row).forEach(([key, value]) => {
                       if (
@@ -347,6 +312,8 @@ const CompanyProblems = ({ user }) => {
                       }
                     });
                     if (!frequency) frequency = '1';
+                    
+                    // Get difficulty
                     let difficulty = 'Unknown';
                     Object.entries(row).forEach(([key, value]) => {
                       if (
@@ -357,6 +324,8 @@ const CompanyProblems = ({ user }) => {
                         difficulty = value;
                       }
                     });
+                    
+                    // Get problem ID/Number
                     let problemId = '';
                     Object.entries(row).forEach(([key, value]) => {
                       if (
@@ -370,6 +339,7 @@ const CompanyProblems = ({ user }) => {
                         problemId = value;
                       }
                     });
+                    
                     const problemKey = getProblemKey(selectedCompany, problemName);
                     return (
                       <tr key={i} className={`transition-all duration-200 hover:bg-gray-700/30 ${solved.includes(problemKey) ? 'bg-emerald-900/20' : ''}`}>
@@ -434,10 +404,10 @@ const CompanyProblems = ({ user }) => {
             </div>
           </div>
         )}
-    </div>);
+      </div>
+    );
+  }
 
-  // Only one top-level return allowed
-  // If selectedCompany, the above block returns; otherwise, return the general/landing view below
   return (
     <div className="max-w-7xl mx-auto p-3 sm:p-4">
       {/* General Search Button */}
@@ -606,7 +576,6 @@ const CompanyProblems = ({ user }) => {
       </div>
     </div>
   );
-}
-}
+};
 
 export default CompanyProblems;
