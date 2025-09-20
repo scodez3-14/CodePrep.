@@ -1,3 +1,10 @@
+// Start auto ping to keep server awake
+try {
+  require('./autoPing');
+  console.log('Auto ping started.');
+} catch (err) {
+  console.warn('Auto ping not started:', err.message);
+}
 
 import express from 'express';
 import mongoose from 'mongoose';
